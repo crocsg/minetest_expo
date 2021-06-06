@@ -48,7 +48,7 @@ To install it copy the downloaded folder (see releases) to the /mods/ folder of 
 
 To allow downloading finding images at runtime the mod needs to get added to the *trusted_mods* in the minetest.conf.  
 Add this line to your minetest.conf:  
-`"secure.trusted_mods = presentations"`  
+`"secure.trusted_mods = expo"`  
 
 
 Once ingame you will need the "presentations" privilage to edit/add displays.  
