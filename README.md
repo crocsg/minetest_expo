@@ -1,4 +1,3 @@
-privname = "expopriv
 # Minetest Expo
 A modified design of the great presentations mod to build virtual expositions in minetest
 This mod is derived from Minetest presentation https://github.com/LucxMangaJet/minetest_presentations
