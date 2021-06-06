@@ -5,13 +5,21 @@ modpath = minetest.get_modpath(modname)
 modstorage = minetest.get_mod_storage()
 
 
+print ('###############################################')
+print ('# PRESENTATION START')
+print ('minetest modname :' .. modname)
+print ('private modname :' .. "expo")
+print ('modpath :' .. modpath)
+print (modstorage)
+print ('###############################################')
+
 path_to_textures = modpath .. DIR_DELIM .. "textures" .. DIR_DELIM
 
-display_formspec_name = modname .. ":display_formspec_"
-display_entity_name = modname .. ':display'
-display_item_name  = modname .. ":display_item"
-display_remote_item_name = modname .. ":display_remote_item"
-display_remote_item_formspec_name = modname .. "display_remote_formspec_"
+display_formspec_name = "expo" .. ":ExpoDisplay_formspec_"
+display_entity_name = "expo" .. ':ExpoDisplay'
+display_item_name  = "expo" .. ":ExpoDisplay_item"
+display_remote_item_name = "expo" .. ":ExpoDisplay_remote_item"
+display_remote_item_formspec_name = "expo" .. ":ExpoDisplay_remote_formspec_"
 
 display_max_size = 50
 display_min_size = 1
@@ -21,7 +29,7 @@ displays = {}
 nextDisplayIndex = 0
 insecure_environment = nil
 
-max_download_length = 2097152 --2MB Increase this to allow bigger images
+
 
 --#endregion GLOBAL VARIABLES
 
@@ -42,11 +50,11 @@ if minetest.request_insecure_environment then
         insecure_environment.package.cpath = insecure_environment.package.cpath.. ";" .. modpath .. "/external/?.so"
         --overriding require to insecure require to allow modules to load dependencies
         local old_require = require
-        require = insecure_environment.require	
+        require = insecure_environment.require
 
         --load modules
-        Http  = require("socket.http")
-        Ltn12 = require("ltn12")
+        --Http  = require("socket.http")
+        --Ltn12 = require("ltn12")
 
         --reset changes
         require = old_require
@@ -55,8 +63,8 @@ if minetest.request_insecure_environment then
      end
 end
 
-minetest.register_privilege("presentations", {
-    description = "Can use and edit presentation displays"
+minetest.register_privilege('expopriv', {
+    description = "Can use and edit expo displays"
 })
 
 local DisplayEntity = {
@@ -78,11 +86,11 @@ local DisplayEntity = {
     proportions_y = 1.0,
     size = 1.0,
     allow_changing = false,
-    
+
     texture_names ={"default.jpg"},
     textures_index = 1,
     textures_count = 1,
-    downloaded_textures = {}
+
 
 }
 
@@ -104,12 +112,14 @@ function DisplayEntity:set_size(new_size)
 end
 
 function  DisplayEntity:update_texture()
-    local name = self.texture_names[self.textures_index]
+    local url = self.texture_names[self.textures_index]
+    name = url:match( "([^/]+)$")
+    print ("display entity :" .. name)
     self.object:set_properties({textures = {name}})
 end
 
 function  DisplayEntity:update_size()
-    
+
     local size_x = self.size * (self.proportions_x / self.proportions_y);
     local size_y = self.size;
     local half_x = size_x * 0.5
@@ -122,7 +132,7 @@ function  DisplayEntity:update_size()
             visual_size = {x = size_x, y = size_y},
             collisionbox = {-half_x, -half_y, -.1, half_x, half_y, .1}
         })
-    else 
+    else
         self.object:set_properties({
             visual_size = {x = size_x, y = size_y},
             collisionbox = {-.1, -half_y, -half_x, .1, half_y, half_x}
@@ -131,7 +141,7 @@ function  DisplayEntity:update_size()
 end
 
 function DisplayEntity:on_activate(staticdata, dtime_s)
-    
+
     if staticdata ~= nil and staticdata ~= "" then
         local data = minetest.parse_json(staticdata)
 
@@ -143,12 +153,12 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
         self.textures_index = data.textures_index
         self.textures_count = data.textures_count
         self.allow_changing = data.allow_changing
-        self.downloaded_textures = data.downloaded_textures
+
 
         self:update_size()
         self:update_texture()
     end
-    
+
     if self.id <0 then
         while displays[nextDisplayIndex] ~= nil do
             nextDisplayIndex = nextDisplayIndex +1
@@ -156,9 +166,9 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
         self.id = nextDisplayIndex
         nextDisplayIndex = nextDisplayIndex + 1
     end
-    
+
     displays[self.id] = self
-    
+
 end
 
 function DisplayEntity:destroy_correctly()
@@ -169,15 +179,15 @@ function DisplayEntity:destroy_correctly()
 end
 
 function DisplayEntity:destroy_correctly_and_cleanup(calling_player)
-    
-    if insecure_environment then
-        for key, value in pairs(self.downloaded_textures) do
-            if file_exists(path_to_textures .. value) then
-                insecure_environment.os.remove(path_to_textures .. value)
-                msg_player(calling_player, "Removing: " .. value)
-            end
-        end
-    end
+
+    --if insecure_environment then
+    --    for key, value in pairs(self.downloaded_textures) do
+    --        if file_exists(path_to_textures .. value) then
+    --            insecure_environment.os.remove(path_to_textures .. value)
+    --            msg_player(calling_player, "Removing: " .. value)
+    --        end
+    --    end
+    --end
 
     --add cleanup
     self:destroy_correctly()
@@ -193,7 +203,7 @@ function  DisplayEntity:get_staticdata()
         textures_index = self.textures_index,
         textures_count = self.textures_count,
         allow_changing = self.allow_changing,
-        downloaded_textures = self.downloaded_textures,
+
     })
 end
 
@@ -216,26 +226,26 @@ function DisplayEntity:goto_number(index)
 end
 
 function player_lacks_privilage(player)
-     return not minetest.check_player_privs(player, { presentations=true }) 
+     return not minetest.check_player_privs(player, { expopriv=true })
 end
 
 function DisplayEntity:on_punch(puncher, time_from_last_punch, tool_capabilities, dir, damage)
 
     if not self.allow_changing then
             if player_lacks_privilage(puncher) then
-            msg_player(puncher, "Can only change this display with the 'presentations' privilage.")
+            msg_player(puncher, "Can only change this display with the 'expopriv' privilage.")
             return true
         end
     end
-    
+
     self:goto_next()
     return true
 end
 
 function DisplayEntity:on_rightclick(clicker)
     if player_lacks_privilage(clicker) then
-        msg_player(clicker, "You need the 'presentations' privilage to edit displays.")
-        return 
+        msg_player(clicker, "You need the 'expopriv' privilege to edit displays.")
+        return
     end
 
     self:show_formspec(clicker)
@@ -245,13 +255,13 @@ function DisplayEntity:show_formspec(clicker)
 
     local height = 5.5 + self.textures_count*0.5
 
-    local testSpec = 
+    local testSpec =
     "formspec_version[4]" ..
-    "size[10,".. height .."]" ..
+    "size[12,".. height .."]" ..
     "achor[0,0]"..
     "label[1,0.5; ID: ".. self.id .."]" ..
-    "button_exit[5,0.25; 1.5,.5;Destroy;Destroy]"  ..
-    "button_exit[6.5,0.25; 2.5,.5;DestroyAndCleanup;Destroy And Cleanup]"  ..
+    "button_exit[5,0.25; 2.5,.5;Destroy;Destroy]"  ..
+    "button_exit[7.5,0.25; 4.5,.5;DestroyAndCleanup;Destroy And Cleanup]"  ..
     "tooltip[DestroyAndCleanup; Destroys the display and deletes all the images downloaded through it;#000000;#ffffff]"..
     "label[1,1.25; Move]" ..
     "button[1,1.5; 1,0.5;MoveRight;X+]" ..
@@ -273,7 +283,7 @@ function DisplayEntity:show_formspec(clicker)
     "field[6,2.5;1,.5;R_CustomY;;".. self.proportions_y .. "]"..
     "button[7,2.5; 2,0.5;R_SetToCustom;Apply Custom]" ..
 
-    "checkbox[1,3.5;AllowChanging;Allow slide changes;".. tostring(self.allow_changing) .."]"..
+    "checkbox[1,3.5;AllowChanging;Standard user can select image;".. tostring(self.allow_changing) .."]"..
 
     "label[1,4.5;URLs:]" ..
     "field[2,4.25;1,.5;Count;Count:;".. self.textures_count .. "]" ..
@@ -285,7 +295,7 @@ function DisplayEntity:show_formspec(clicker)
         if default == nil then
             default = ""
         end
-        testSpec = testSpec .."field[1,".. y ..";8,.5;URL".. i ..";;".. default .."]" 
+        testSpec = testSpec .."field[1,".. y ..";10,.5;URL".. i ..";;".. default .."]"
         y = y + 0.5
     end
 
@@ -386,7 +396,7 @@ function handle_display_form(player, formname, fields)
     if fields.DestroyAndCleanup then
         display:destroy_correctly_and_cleanup(player)
     end
-    
+
     if fields.UpdateImages then
         local newTextures = {}
         for i = 1, display.textures_count, 1 do
@@ -397,25 +407,31 @@ function handle_display_form(player, formname, fields)
             if url and url ~= "" then
                 local valid = ends_with_one_of(url, {".jpg", ".jpeg", ".JPG", ".png", ".PNG"})
                 local fixSpelling = ends_with_one_of(url, {".JPG", ".PNG"})
-
+                print ("testing image url")
+                print ("url valid")
                 if valid then
                     local name = url:match( "([^/]+)$")
                     if fixSpelling then
                         name = name:gsub(".JPG", ".jpg")
                         name = name:gsub(".PNG", ".png")
                     end
-
-                    if file_exists(path_to_textures .. name) then
-                        newTextures[i] = name
-                        msg_player(player, "Image " .. i .. " already downloaded.")
-                    else
-                        local ok = download_and_save_texture(player, url, name)
-                        if ok then
-                            newTextures[i] = name
-                            table.insert(display.downloaded_textures,name)
-                        else
-                            --error
-                        end
+                    print ("file name " .. name)
+                    print ("file path " .. path_to_textures .. " file name:" .. name)
+                    if file_exists(path_to_textures .. url) then
+                        newTextures[i] = url
+                        print (url)
+                        print (i)
+                        --msg_player(player, "Image " .. i .. " already downloaded.")
+                        --msg_player(player, "Image " .. url .. " loaded.")
+                        msg_player(player, "Image " .. name .. url .." loaded.")
+                    --else
+                    --    local ok = download_and_save_texture(player, url, name)
+                    --    if ok then
+                    --        newTextures[i] = name
+                    --        table.insert(display.downloaded_textures,name)
+                    --    else
+                    --        --error
+                    --    end
                     end
                 else
                     msg_player(player, "Only .png and .jpg are supported. Invalid URL: " .. i .. " -> " .. url)
@@ -435,7 +451,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
     end
 end)
 
-function move_offset (display, x, y, z)  
+function move_offset (display, x, y, z)
     local pos = display.object:get_pos()
     pos.x = pos.x + x
     pos.y = pos.y + y
@@ -447,7 +463,7 @@ end
  function starts_with(str, start)
     return str:sub(1, #start) == start
  end
- 
+
  function ends_with(str, ending)
     return ending == "" or str:sub(-#ending) == ending
  end
@@ -478,96 +494,16 @@ end
 
 minetest.register_entity(display_entity_name, DisplayEntity)
 
-function download_and_save_texture(requester ,url, name)
-
-        if not Http or not Ltn12 or not insecure_environment then
-            msg_player(requester, "[ERROR] Unable to make http request. (" .. modname .. " requires insecure environment permissions to download textures." )
-            return false
-        end
-        
-        if starts_with(url, "https") then
-
-            msg_player(requester, "[ERROR] Https is not supported at the moment.")
-            return false
-        end
-
-        msg_player(requester, "HTTP Request: " .. url)
-
-        --do a HEAD request first to check for and content-length
-        local client, code, headers = Http.request({url=url, method ="HEAD"})
-
-        if code ~= 200 then
-
-            --handle permanent redirect
-            if code == 301 then
-                local location = headers["location"]
-                if location then
-                    msg_player(requester, "301 - Redirected to " .. location)
-                    return download_and_save_texture(requester, location, name)
-                else
-                    msg_player(requester, "[ERROR] 301 - Redirection failed ")
-                    return false
-                end
-            end
-
-            msg_player(requester, "[ERROR] HTTP code " ..code)
-            return false
-        end
-
-        local size = tonumber(headers["content-length"]);
-
-        if not size then
-            msg_player(requester, "[ERROR] unable to get content-length")
-            return false
-        end
-
-        if size > max_download_length then
-            msg_player(requester, "[ERROR] filesize of " .. tostring(size) .." bytes exceeds max size of " .. tostring(max_download_length) .. " bytes")
-            return false
-        end
-
-        --actual HTTP GET to download the content
-		local resp   = {}
-		local client, code, headers, status = Http.request({url=url, sink=Ltn12.sink.table(resp), method="GET" })
-            
-        if code ~= 200 then
-            msg_player(requester, "[ERROR] HTTP code " ..code)
-            return false
-        end
-            if resp then
-                local data = table.concat(resp);
-                if data then
-                    
-                    local path =  path_to_textures .. name
-                    local file = insecure_environment.io.open(path, "w+")
-                    insecure_environment.io.output(file)
-                    insecure_environment.io.write(data)
-                    insecure_environment.io.close(file)
-                    if minetest.dynamic_add_media then
-                        minetest.dynamic_add_media(path)
-                        msg_player(requester, "Downloaded and dynamically added " .. name)
-                    else 
-                        msg_player(requester, "Downloaded " .. name .. ". [WARNING] Failed to add dynamically (dynamic_add_media). This feature requires 5.3.0 or newer." ..
-                        "The image should be available on server restart.") 
-                    end
-                    
-                    return true
-                end
-            end
-
-    msg_player(requester, "[ERROR] Unknown download error")
-    return false
-end
 
 
 minetest.register_craftitem(display_item_name,{
-    description = "Display",
+    description = "Expo Display",
     inventory_image = "display_item.png",
     on_place = function(itemstack, user, pointed_thing)
 
         if pointed_thing.type == "node" then
         minetest.add_entity(pointed_thing.above,  display_entity_name)
-        
+
         --Displays are not consumed as this is meant as a creative mode only tool
         --itemstack:take_item()
         end
@@ -577,14 +513,14 @@ minetest.register_craftitem(display_item_name,{
 
 
 minetest.register_craftitem(display_remote_item_name, {
-    description = "Display Remote",
+    description = "Expo Display Remote",
     inventory_image = "display_remote_item.png",
     on_use = function (itemstack, user, pointed_thing)
         local meta = itemstack:get_meta()
 
     if pointed_thing then
         if pointed_thing.type == "object" then
-        
+
             if pointed_thing.ref then
             if pointed_thing.ref.get_luaentity then
                 local entity = pointed_thing.ref:get_luaentity()
@@ -596,7 +532,7 @@ minetest.register_craftitem(display_remote_item_name, {
         end
         end
         end
-        
+
         local id = meta:get_int("display_id")
         if id >= 0 and displays[id] ~= nil then
             minetest.show_formspec(user:get_player_name(), display_remote_item_formspec_name .. id, get_remote_formspec(id))
@@ -605,18 +541,18 @@ minetest.register_craftitem(display_remote_item_name, {
 
         return itemstack
     end
-    
+
 })
 
 function get_remote_formspec(id)
-    
+
     local formspec = ""
-    
-    if id < 0 or displays[id] == nil then 
+
+    if id < 0 or displays[id] == nil then
        formspec = "formspec_version[4]" ..
        "size[5,5]" ..
        "achor[0,0]" ..
-    "label[1,1; Bound to no display, leftclick on a display to connect]" 
+    "label[1,1; Bound to no display, leftclick on a display to connect]"
     else
         local display = displays[id]
         local sizeY = 5.5 + math.floor(display.textures_count/5) * 0.5
@@ -674,16 +610,16 @@ function handle_display_remote_form(player, formname, fields)
     end
 end
 
-minetest.register_chatcommand("log_presentation_textures", {
+minetest.register_chatcommand("log_expo_textures", {
     privs = {
-        presentations = true,
+        expopriv = true,
     },
     func = function(name, param)
         if not insecure_environment then
         return false
         end
 
-        local msg = "DOWNLOADED TEXTURES:"
+        local msg = "TEXTURES:"
         msg = msg.. "NOT IMPLEMENTED YET"
         return true, msg
     end
@@ -691,4 +627,7 @@ minetest.register_chatcommand("log_presentation_textures", {
 
 
 
-print("[OK] Presentations")
+print("[OK] Expo")
+print ("Expo MOD NAME " .. modname)
+print ("Expo MOD display_item_name " .. display_item_name)
+print ("Expo MOD display_entity_name " .. display_entity_name)
