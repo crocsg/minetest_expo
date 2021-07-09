@@ -89,7 +89,7 @@ local DisplayEntity = {
     size = 1.0,
     allow_changing = false,
 
-    texture_names ={"default.jpg"},
+    texture_names ={"/expo/expo.jpg"},
     textures_index = 1,
     textures_count = 1,
 
@@ -135,6 +135,11 @@ function  DisplayEntity:update_size()
             collisionbox = {-half_x, -half_y, -.1, half_x, half_y, .1}
         })
     elseif yaw >= math.pi / 5 and yaw <= math.pi / 3 then
+		self.object:set_properties({
+				visual_size = {x = size_x, y = size_y},
+				collisionbox = {-half_x * 0.7, -half_y, -half_x * 0.7, half_x* 0.7, half_y, half_x* 0.7}
+			})
+	elseif yaw >= ((math.pi / 2)+ (math.pi/8)) and yaw <= ((math.pi / 2)+ (math.pi / 4) + (math.pi/8)) then
 		self.object:set_properties({
 				visual_size = {x = size_x, y = size_y},
 				collisionbox = {-half_x * 0.7, -half_y, -half_x * 0.7, half_x* 0.7, half_y, half_x* 0.7}
@@ -313,12 +318,12 @@ function DisplayEntity:show_formspec(clicker)
 
     "label[1,4.5;URLs:]" ..
     "field[2,4.25;1,.5;Count;Count:;".. self.textures_count .. "]" ..
-    "button[5,4.25;2,.5;UpdateImages; Save URLs]" ..
-	"label[1,7; Description]"..
-	 "textarea[1,7.5;10,3;ALT_Desc;;"..  localinfo .. "]"
+    "button[5,8.5;2,.5;UpdateImages; Save URLs]" ..
+	"label[1,5; Description]"..
+	"textarea[1,5.5;10,3;ALT_Desc;;"..  localinfo .. "]"
 
 
-    local y = 5
+    local y = 9
     for i = 1, self.textures_count, 1 do
         local default = self.texture_names[i]
         if default == nil then
@@ -391,11 +396,12 @@ function handle_display_form(player, formname, fields)
         --else
         --    display.object:set_yaw(0)
         --end
-	yaw = yaw + math.pi / 4
-	if yaw > math.pi/2 then
-		yaw = 0
-	end
-	display.object:set_yaw(yaw)
+		yaw = yaw + (math.pi / 4)
+		if yaw > ((math.pi/2) + (math.pi/8)+ (math.pi/4)) then
+			yaw = 0
+		end
+		print ("yaw ".. yaw)
+		display.object:set_yaw(yaw)
         display:update_size()
     end
 
@@ -432,19 +438,19 @@ function handle_display_form(player, formname, fields)
     end
 	
     if fields.ALT_Desc then
-	print (fields.ALT_Desc)
+	--print (fields.ALT_Desc)
 	--display.initial_properties.infotext = fields.ALT_Desc
 	display.object:set_properties({
     		infotext = fields.ALT_Desc,
 	})
-        local props = display.object:get_properties ()
-        for k,v in pairs(props) do
-           print (k)
-           print (v)
-        end
-        print ("##################### infotext ################")
-        print (props.infotext)	
-        print ("##################### infotext ################")
+	--local props = display.object:get_properties ()
+	--for k,v in pairs(props) do
+	--  print (k)
+	--   print (v)
+	--end
+	--print ("##################### infotext ################")
+	--print (props.infotext)	
+	--print ("##################### infotext ################")
 
 
     end
