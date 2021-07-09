@@ -6,10 +6,10 @@ modstorage = minetest.get_mod_storage()
 
 
 print ('###############################################')
-print ('# PRESENTATION START')
-print ('minetest modname :' .. modname)
-print ('private modname :' .. "expo")
-print ('modpath :' .. modpath)
+print ('# EXPO START')
+print ('# minetest modname :' .. modname)
+print ('# private modname :' .. "expo")
+print ('# modpath :' .. modpath)
 print (modstorage)
 print ('###############################################')
 
@@ -79,6 +79,8 @@ local DisplayEntity = {
         textures = {"default.jpg"},
         spritediv = {x = 1, y = 1},
         initial_sprite_basepos = {x = 0, y = 0},
+	infotext="Description"
+
     },
 
     id = -1,
@@ -113,7 +115,7 @@ end
 
 function  DisplayEntity:update_texture()
     local url = self.texture_names[self.textures_index]
-    name = url:match( "([^/]+)$")
+    local name = url:match( "([^/]+)$")
     print ("display entity :" .. name)
     self.object:set_properties({textures = {name}})
 end
@@ -132,7 +134,12 @@ function  DisplayEntity:update_size()
             visual_size = {x = size_x, y = size_y},
             collisionbox = {-half_x, -half_y, -.1, half_x, half_y, .1}
         })
-    else
+    elseif yaw >= math.pi / 5 and yaw <= math.pi / 3 then
+		self.object:set_properties({
+				visual_size = {x = size_x, y = size_y},
+				collisionbox = {-half_x * 0.7, -half_y, -half_x * 0.7, half_x* 0.7, half_y, half_x* 0.7}
+			})
+	else	
         self.object:set_properties({
             visual_size = {x = size_x, y = size_y},
             collisionbox = {-.1, -half_y, -half_x, .1, half_y, half_x}
@@ -153,7 +160,12 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
         self.textures_index = data.textures_index
         self.textures_count = data.textures_count
         self.allow_changing = data.allow_changing
-
+	
+	if (data.alt_description) then
+	    self.object:set_properties({
+    		infotext = data.alt_description,
+	    })
+        end
 
         self:update_size()
         self:update_texture()
@@ -194,6 +206,8 @@ function DisplayEntity:destroy_correctly_and_cleanup(calling_player)
 end
 
 function  DisplayEntity:get_staticdata()
+    local props = self.object:get_properties ()
+
     return minetest.write_json({
         id = self.id,
         proportions_x = self.proportions_x,
@@ -203,6 +217,7 @@ function  DisplayEntity:get_staticdata()
         textures_index = self.textures_index,
         textures_count = self.textures_count,
         allow_changing = self.allow_changing,
+	alt_description = props.infotext,
 
     })
 end
@@ -252,8 +267,19 @@ function DisplayEntity:on_rightclick(clicker)
 end
 
 function DisplayEntity:show_formspec(clicker)
+    local props = self.object:get_properties ()
 
-    local height = 5.5 + self.textures_count*0.5
+    local height = 10.5 + self.textures_count*0.5
+    
+    
+    --for k,v in pairs(props) do
+    --    print (k)
+    --    print (v)
+    --end
+    --print ("##################### infotext ################")
+    --print (props.infotext)	
+    --print ("##################### infotext ################")
+    local localinfo = props.infotext
 
     local testSpec =
     "formspec_version[4]" ..
@@ -287,7 +313,10 @@ function DisplayEntity:show_formspec(clicker)
 
     "label[1,4.5;URLs:]" ..
     "field[2,4.25;1,.5;Count;Count:;".. self.textures_count .. "]" ..
-    "button[5,4.25;2,.5;UpdateImages; Save URLs]"
+    "button[5,4.25;2,.5;UpdateImages; Save URLs]" ..
+	"label[1,7; Description]"..
+	 "textarea[1,7.5;10,3;ALT_Desc;;"..  localinfo .. "]"
+
 
     local y = 5
     for i = 1, self.textures_count, 1 do
@@ -356,12 +385,17 @@ function handle_display_form(player, formname, fields)
 
     if fields.Rotate then
         local yaw = display.object:get_yaw()
-        if yaw == 0 then
-            display.object:set_yaw(math.pi/2)
-        else
-            display.object:set_yaw(0)
-        end
-
+	
+        --if yaw == 0 then
+        --    display.object:set_yaw(math.pi/2)
+        --else
+        --    display.object:set_yaw(0)
+        --end
+	yaw = yaw + math.pi / 4
+	if yaw > math.pi/2 then
+		yaw = 0
+	end
+	display.object:set_yaw(yaw)
         display:update_size()
     end
 
@@ -395,6 +429,24 @@ function handle_display_form(player, formname, fields)
 
     if fields.DestroyAndCleanup then
         display:destroy_correctly_and_cleanup(player)
+    end
+	
+    if fields.ALT_Desc then
+	print (fields.ALT_Desc)
+	--display.initial_properties.infotext = fields.ALT_Desc
+	display.object:set_properties({
+    		infotext = fields.ALT_Desc,
+	})
+        local props = display.object:get_properties ()
+        for k,v in pairs(props) do
+           print (k)
+           print (v)
+        end
+        print ("##################### infotext ################")
+        print (props.infotext)	
+        print ("##################### infotext ################")
+
+
     end
 
     if fields.UpdateImages then
