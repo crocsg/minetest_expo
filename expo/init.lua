@@ -11,7 +11,7 @@ print ('# minetest modname :' .. modname)
 print ('# private modname :' .. "expo")
 print ('# modpath :' .. modpath)
 print (modstorage)
-print ('###############################################')
+
 
 path_to_textures = modpath .. DIR_DELIM .. "textures" .. DIR_DELIM
 
@@ -79,7 +79,10 @@ local DisplayEntity = {
         textures = {"default.jpg"},
         spritediv = {x = 1, y = 1},
         initial_sprite_basepos = {x = 0, y = 0},
-	infotext="Description"
+		nametag="",
+		infotext="Description",
+		_expodisplayentity = 1,
+		
 
     },
 
@@ -92,6 +95,8 @@ local DisplayEntity = {
     texture_names ={"/expo/expo.jpg"},
     textures_index = 1,
     textures_count = 1,
+	_expoid="expodisplay",
+	plopbidule = "expodisplay",
 
 
 }
@@ -166,16 +171,25 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
         self.textures_count = data.textures_count
         self.allow_changing = data.allow_changing
 	
-	if (data.alt_description) then
-	    self.object:set_properties({
-    		infotext = data.alt_description,
-	    })
-        end
-
+		if (data.alt_description) then
+			self.object:set_properties({
+				infotext = data.alt_description,
+			})
+		end
+		
+		if (data._expoid) then
+			self.object:set_properties({
+				_expoid = data._expoid,
+			})
+		end
+		self.object:set_properties({
+				expodisplaydata = "data",
+			})
         self:update_size()
         self:update_texture()
     end
-
+	
+	
     if self.id <0 then
         while displays[nextDisplayIndex] ~= nil do
             nextDisplayIndex = nextDisplayIndex +1
@@ -185,6 +199,7 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
     end
 
     displays[self.id] = self
+	print ("expo on_activate")
 
 end
 
@@ -222,7 +237,8 @@ function  DisplayEntity:get_staticdata()
         textures_index = self.textures_index,
         textures_count = self.textures_count,
         allow_changing = self.allow_changing,
-	alt_description = props.infotext,
+		alt_description = props.infotext,
+		_expoid = self._expoid,
 
     })
 end
@@ -438,20 +454,25 @@ function handle_display_form(player, formname, fields)
     end
 	
     if fields.ALT_Desc then
-	--print (fields.ALT_Desc)
-	--display.initial_properties.infotext = fields.ALT_Desc
-	display.object:set_properties({
-    		infotext = fields.ALT_Desc,
-	})
-	--local props = display.object:get_properties ()
-	--for k,v in pairs(props) do
-	--  print (k)
-	--   print (v)
-	--end
-	--print ("##################### infotext ################")
-	--print (props.infotext)	
-	--print ("##################### infotext ################")
+		--print (fields.ALT_Desc)
+		--display.initial_properties.infotext = fields.ALT_Desc
+		display.object:set_properties({
+				infotext = fields.ALT_Desc,
+		})
+		--local props = display.object:get_properties ()
+		--for k,v in pairs(props) do
+		--  print (k)
+		--   print (v)
+		--end
+		--print ("##################### infotext ################")
+		--print (props.infotext)	
+		--print ("##################### infotext ################")
+		local player_name = player:get_player_name()
 
+		-- Get the dig and place count from storage, or default to 0
+		local meta        = player:get_meta()
+		meta:set_string("expo:description", fields.ALT_Desc)
+		expomod.update_text (player, fields.ALT_Desc)
 
     end
 
@@ -683,9 +704,164 @@ minetest.register_chatcommand("log_expo_textures", {
     end
 })
 
+--########################## HUD element
 
+expomod = {}
+local saved_huds = {}
 
-print("[OK] Expo")
-print ("Expo MOD NAME " .. modname)
-print ("Expo MOD display_item_name " .. display_item_name)
-print ("Expo MOD display_entity_name " .. display_entity_name)
+function expomod.update_text (player, text)
+	local player_name = player:get_player_name()
+	local ids = saved_huds[player_name]
+	print ("expo try to update")
+	if ids then
+        player:hud_change(ids["description"], "text", text)
+		print ("expo update")
+	end
+end
+	
+function expomod.update_hud(player)
+    local player_name = player:get_player_name()
+
+    -- Get the dig and place count from storage, or default to 0
+    local meta        = player:get_meta()
+    local desc_text = meta:get("expo:description") or ""
+ 
+
+    local ids = saved_huds[player_name]
+    if ids then
+        player:hud_change(ids["description"], "text", desc_text)
+        
+    else
+		print ("expo : registering hud")
+        ids = {}
+        saved_huds[player_name] = ids
+		local hid = player:hud_add({
+			hud_elem_type = "text",
+			position  = {x = 0.5, y = 0.5},
+			offset    = {x = 0, y = 0},
+			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
+			alignment = -1,
+			scale     = { x = 0.25, y = 100},
+			number    = 0xFF0000,
+		})
+		ids["description"]= hid
+        
+    end
+end
+
+function expomod.get_looking_entity(player) -- Return the node the given player is looking at or nil
+    local lookat
+	
+	local player_look_vector = vector.multiply(player:get_look_dir(), 8)
+	
+	print ("### RAYCAST ###")
+	local raycast = minetest.raycast(player:get_pos(), vector.add(player:get_pos(), player_look_vector), true, false)
+	for pointed_thing in raycast do
+		print (pointed_thing.type)
+		if pointed_thing.type == "object" then
+			if pointed_thing then
+				for k,v in pairs(pointed_thing) do
+					print ("key: " .. k)
+					print (v)
+				end
+				print ("### get object properties")
+				local props = pointed_thing.ref:get_properties ()
+				print (props)
+				for k1,v1 in pairs (props) do
+					print ("--key: " ..k1)
+					print (v1)
+				end
+				
+				print ("### meta")
+				
+				print(getmetatable(pointed_thing.ref))
+				local meta = getmetatable(pointed_thing.ref)
+				for k1,v1 in pairs (meta) do
+					print ("##key: " ..k1)
+					print (v1)
+				end
+				
+				print ("### meta meta")
+				local mmeta = pointed_thing.ref:get_meta()
+				print(mmeta)
+				print ("### object end")
+				
+				print ("### entity ")
+				if pointed_thing.ref then
+					if pointed_thing.ref.get_luaentity then
+						local entity = pointed_thing.ref:get_luaentity()
+						if entity then
+							print (entity)
+							for k1, v1 in pairs (entity) do
+								print ("entitykey :" .. k1)
+								print (v1)
+							end
+						end
+					end
+				end
+				
+			end
+			
+		end
+    end
+	print ("### END RAYCAST ###")
+	return lookat
+	--[[
+    for i = 0, 10 do -- 10 is the maximum distance you can point to things in creative mode by default
+        local lookvector = -- This variable will store what node we might be looking at
+            vector.add( -- This add function corrects for the players approximate height
+                vector.add( -- This add function applies the camera's position to the look vector
+                    vector.multiply( -- This multiply function adjusts the distance from the camera by the iteration of the loop we're in
+							player_look_vector, 
+							i -- Goes from 0 to 10
+                    ), 
+                    player:get_pos()
+                ),
+                vector.new(0, 1.5, 0)
+            )
+			
+			lookat = minetest.get_node_or_nil( -- This actually gets the node we might be looking at
+				lookvector
+        ) 
+		
+        if lookat ~= nil  then
+			for k,v in pairs(lookat) do
+				print (k)
+				print (v)
+			end
+		end
+    end
+	
+    return lookat
+	--]]
+end
+
+function expomod.check_entities ()
+	for pid, player in ipairs(minetest:get_connected_players()) do
+		expomod.get_looking_entity(player)
+	end
+end	
+	
+print ("# Expo: registering player join")
+minetest.register_on_joinplayer(expomod.update_hud)
+
+minetest.register_on_leaveplayer(function(player)
+    saved_huds[player:get_player_name()] = nil
+end)
+
+print ("# Expo: registering globalstep")
+expomod.timer = 0
+minetest.register_globalstep(function(dtime)
+	expomod.timer = expomod.timer + dtime;
+	if expomod.timer >= 0.8 then
+		
+		expomod.timer = 0
+		expomod.check_entities ()
+	end
+end)
+
+print ("# Expo MOD NAME " .. modname)
+print ("# Expo MOD display_item_name " .. display_item_name)
+print ("# Expo MOD display_entity_name " .. display_entity_name)
+print("# Expo [OK]")
+print ('###############################################')
