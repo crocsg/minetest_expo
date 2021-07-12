@@ -1,56 +1,58 @@
 --#region GLOBAL VARIABLES
 
-modname = minetest.get_current_modname()
-modpath = minetest.get_modpath(modname)
-modstorage = minetest.get_mod_storage()
+expomod = {}
+
+expomod.modname = minetest.get_current_modname()
+expomod.modpath = minetest.get_modpath(expomod.modname)
+expomod.modstorage = minetest.get_mod_storage()
 
 
 print ('###############################################')
 print ('# EXPO START')
-print ('# minetest modname :' .. modname)
-print ('# private modname :' .. "expo")
-print ('# modpath :' .. modpath)
-print (modstorage)
+print ('# minetest expomod.modname :' .. expomod.modname)
+print ('# private expomod.modname :' .. "expo")
+print ('# expomod.modpath :' .. expomod.modpath)
 
 
-path_to_textures = modpath .. DIR_DELIM .. "textures" .. DIR_DELIM
 
-display_formspec_name = "expo" .. ":ExpoDisplay_formspec_"
-display_entity_name = "expo" .. ':ExpoDisplay'
-display_item_name  = "expo" .. ":ExpoDisplay_item"
-display_remote_item_name = "expo" .. ":ExpoDisplay_remote_item"
-display_remote_item_formspec_name = "expo" .. ":ExpoDisplay_remote_formspec_"
+expomod.path_to_textures = expomod.modpath .. DIR_DELIM .. "textures" .. DIR_DELIM
 
-display_max_size = 50
-display_min_size = 1
-display_max_textures = 30
+expomod.display_formspec_name = "expo" .. ":ExpoDisplay_formspec_"
+expomod.display_entity_name = "expo" .. ':ExpoDisplay'
+expomod.display_item_name  = "expo" .. ":ExpoDisplay_item"
+expomod.display_remote_item_name = "expo" .. ":ExpoDisplay_remote_item"
+expomod.display_remote_item_formspec_name = "expo" .. ":ExpoDisplay_remote_formspec_"
 
-displays = {}
-nextDisplayIndex = 0
-insecure_environment = nil
+expomod.display_max_size = 50
+expomod.display_min_size = 1
+expomod.display_max_textures = 30
+
+expomod.displays = {}
+expomod.nextDisplayIndex = 0
+expomod.insecure_environment = nil
 
 
 
 --#endregion GLOBAL VARIABLES
 
 
-function  print_warn(msg)
+function  expomod.print_warn(msg)
     print('\27[93m'..msg ..'\27[0m')
 end
 
 if minetest.request_insecure_environment then
-	 insecure_environment = minetest.request_insecure_environment()
-	 if not insecure_environment then
-        print_warn("[WARNING] Presentation requires an insecure environment to download textures. Add 'secure.trusted_mods = " .. modname .. "' to the minetest.conf to enable this feature.")
+	 expomod.insecure_environment = minetest.request_insecure_environment()
+	 if not expomod.insecure_environment then
+        expomod.print_warn("[WARNING] Presentation requires an insecure environment to download textures. Add 'secure.trusted_mods = " .. expomod.modname .. "' to the minetest.conf to enable this feature.")
      else
         --override package path to recoginze external folder
-        local old_path = insecure_environment.package.path
-        local old_cpath = insecure_environment.package.cpath
-        insecure_environment.package.path = insecure_environment.package.path.. ";" .. modpath .. "/external/?.lua"
-        insecure_environment.package.cpath = insecure_environment.package.cpath.. ";" .. modpath .. "/external/?.so"
+        local old_path = expomod.insecure_environment.package.path
+        local old_cpath = expomod.insecure_environment.package.cpath
+        expomod.insecure_environment.package.path = expomod.insecure_environment.package.path.. ";" .. expomod.modpath .. "/external/?.lua"
+        expomod.insecure_environment.package.cpath = expomod.insecure_environment.package.cpath.. ";" .. expomod.modpath .. "/external/?.so"
         --overriding require to insecure require to allow modules to load dependencies
         local old_require = require
-        require = insecure_environment.require
+        require = expomod.insecure_environment.require
 
         --load modules
         --Http  = require("socket.http")
@@ -58,13 +60,13 @@ if minetest.request_insecure_environment then
 
         --reset changes
         require = old_require
-        insecure_environment.package.path = old_path
-        insecure_environment.package.cpath = old_cpath
+        expomod.insecure_environment.package.path = old_path
+        expomod.insecure_environment.package.cpath = old_cpath
      end
 end
 
 minetest.register_privilege('expopriv', {
-    description = "Can use and edit expo displays"
+    description = "Can use and edit expo expomod.displays"
 })
 
 local DisplayEntity = {
@@ -80,8 +82,8 @@ local DisplayEntity = {
         spritediv = {x = 1, y = 1},
         initial_sprite_basepos = {x = 0, y = 0},
 		nametag="",
-		infotext="Description",
-		_expodisplayentity = 1,
+		infotext="",
+		
 		
 
     },
@@ -96,6 +98,7 @@ local DisplayEntity = {
     textures_index = 1,
     textures_count = 1,
 	_expoid="expodisplay",
+	_altdescription="",
 	plopbidule = "expodisplay",
 
 
@@ -172,51 +175,55 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
         self.allow_changing = data.allow_changing
 	
 		if (data.alt_description) then
-			self.object:set_properties({
-				infotext = data.alt_description,
-			})
+			self._altdescription = data.alt_description
+			--self.object:set_properties({
+			--	infotext = data.alt_description,
+			--})
 		end
 		
 		if (data._expoid) then
-			self.object:set_properties({
-				_expoid = data._expoid,
-			})
+			self._expoid = data._expoid
+			--self.object:set_properties({
+			--	_expoid = data._expoid,
+			--})
 		end
-		self.object:set_properties({
-				expodisplaydata = "data",
-			})
+		
+		if (data.biduleplop) then
+			self.plopbidule = data.biduleplop
+		end
+		
         self:update_size()
         self:update_texture()
     end
 	
 	
     if self.id <0 then
-        while displays[nextDisplayIndex] ~= nil do
-            nextDisplayIndex = nextDisplayIndex +1
+        while expomod.displays[expomod.nextDisplayIndex] ~= nil do
+            expomod.nextDisplayIndex = expomod.nextDisplayIndex +1
         end
-        self.id = nextDisplayIndex
-        nextDisplayIndex = nextDisplayIndex + 1
+        self.id = expomod.nextDisplayIndex
+        expomod.nextDisplayIndex = expomod.nextDisplayIndex + 1
     end
 
-    displays[self.id] = self
+    expomod.displays[self.id] = self
 	print ("expo on_activate")
 
 end
 
 function DisplayEntity:destroy_correctly()
     --Removed drop as it is bothersome in creative mode
-    --minetest.add_item(self.object:get_pos(), display_item_name)
-    displays[self.id] = nil
+    --minetest.add_item(self.object:get_pos(), expomod.display_item_name)
+    expomod.displays[self.id] = nil
     self.object:remove()
 end
 
 function DisplayEntity:destroy_correctly_and_cleanup(calling_player)
 
-    --if insecure_environment then
+    --if expomod.insecure_environment then
     --    for key, value in pairs(self.downloaded_textures) do
-    --        if file_exists(path_to_textures .. value) then
-    --            insecure_environment.os.remove(path_to_textures .. value)
-    --            msg_player(calling_player, "Removing: " .. value)
+    --        if expomod.file_exists(expomod.path_to_textures .. value) then
+    --            expomod.insecure_environment.os.remove(expomod.path_to_textures .. value)
+    --            expomod.msg_player(calling_player, "Removing: " .. value)
     --        end
     --    end
     --end
@@ -227,7 +234,17 @@ end
 
 function  DisplayEntity:get_staticdata()
     local props = self.object:get_properties ()
-
+	local tmp = ""
+	
+	if (self._altdescription == "" and props.infotext ~= "") then
+			tmp = props.infotext
+			self._altdescription =  props.infotext
+	else
+		tmp = self._altdescription
+	end
+	
+	print ("loading description :" .. self._altdescription)	
+	print ("loading description :" .. tmp)	
     return minetest.write_json({
         id = self.id,
         proportions_x = self.proportions_x,
@@ -237,9 +254,9 @@ function  DisplayEntity:get_staticdata()
         textures_index = self.textures_index,
         textures_count = self.textures_count,
         allow_changing = self.allow_changing,
-		alt_description = props.infotext,
+		alt_description = tmp,
 		_expoid = self._expoid,
-
+		biduleplop = self.plopbidule,
     })
 end
 
@@ -268,8 +285,8 @@ end
 function DisplayEntity:on_punch(puncher, time_from_last_punch, tool_capabilities, dir, damage)
 
     if not self.allow_changing then
-            if player_lacks_privilage(puncher) then
-            msg_player(puncher, "Can only change this display with the 'expopriv' privilage.")
+		if player_lacks_privilage(puncher) then
+            expomod.msg_player(puncher, "Can only change this display with the 'expopriv' privilage.")
             return true
         end
     end
@@ -280,7 +297,7 @@ end
 
 function DisplayEntity:on_rightclick(clicker)
     if player_lacks_privilage(clicker) then
-        msg_player(clicker, "You need the 'expopriv' privilege to edit displays.")
+        expomod.msg_player(clicker, "You need the 'expopriv' privilege to edit expomod.displays.")
         return
     end
 
@@ -300,7 +317,7 @@ function DisplayEntity:show_formspec(clicker)
     --print ("##################### infotext ################")
     --print (props.infotext)	
     --print ("##################### infotext ################")
-    local localinfo = props.infotext
+    
 
     local testSpec =
     "formspec_version[4]" ..
@@ -336,7 +353,7 @@ function DisplayEntity:show_formspec(clicker)
     "field[2,4.25;1,.5;Count;Count:;".. self.textures_count .. "]" ..
     "button[5,8.5;2,.5;UpdateImages; Save URLs]" ..
 	"label[1,5; Description]"..
-	"textarea[1,5.5;10,3;ALT_Desc;;"..  localinfo .. "]"
+	"textarea[1,5.5;10,3;ALT_Desc;;"..  self._altdescription .. "]"
 
 
     local y = 9
@@ -349,59 +366,60 @@ function DisplayEntity:show_formspec(clicker)
         y = y + 0.5
     end
 
-    minetest.show_formspec(clicker:get_player_name(), display_formspec_name .. self.id, testSpec)
+    minetest.show_formspec(clicker:get_player_name(), expomod.display_formspec_name .. self.id, testSpec)
 end
 
 
-function handle_display_form(player, formname, fields)
-    local id = tonumber(string.sub(formname, display_formspec_name:len()+1));
-    local display = displays[id]
+function expomod.handle_display_form(player, formname, fields)
+    local id = tonumber(string.sub(formname, expomod.display_formspec_name:len()+1));
+    local display = expomod.displays[id]
     if not display then
-        msg_player(player, "Error: no display found with id " .. id)
+        expomod.msg_player(player, "Error: no display found with id " .. id)
         return
     end
 
     if fields.AllowChanging then
     display.allow_changing = tostring(fields.AllowChanging) == "true"
+	--print (display.allow_changing)
     end
 
     if fields.Count then
         local number = tonumber(fields.Count)
         if number then
-        display.textures_count = math.min(display_max_textures, number)
+        display.textures_count = math.min(expomod.display_max_textures, number)
         end
     end
 
     if fields.ScalePlus then
-        display:set_size(math.min(display.size+1, display_max_size))
+        display:set_size(math.min(display.size+1, expomod.display_max_size))
     end
 
     if fields.ScaleMinus then
-        display:set_size(math.max(display.size-1, display_min_size))
+        display:set_size(math.max(display.size-1, expomod.display_min_size))
     end
 
     if fields.MoveUp then
-        move_offset(display,0,1,0)
+        expomod.move_offset(display,0,1,0)
     end
 
     if fields.MoveDown then
-        move_offset(display, 0,-1,0)
+        expomod.move_offset(display, 0,-1,0)
     end
 
     if fields.MoveRight then
-        move_offset(display,1,0,0)
+        expomod.move_offset(display,1,0,0)
     end
 
     if fields.MoveLeft then
-        move_offset(display,-1,0,0)
+        expomod.move_offset(display,-1,0,0)
     end
 
     if fields.MoveForward then
-        move_offset(display,0,0,1)
+        expomod.move_offset(display,0,0,1)
     end
 
     if fields.MoveBackward then
-        move_offset(display,0,0,-1)
+        expomod.move_offset(display,0,0,-1)
     end
 
     if fields.Rotate then
@@ -456,9 +474,13 @@ function handle_display_form(player, formname, fields)
     if fields.ALT_Desc then
 		--print (fields.ALT_Desc)
 		--display.initial_properties.infotext = fields.ALT_Desc
-		display.object:set_properties({
-				infotext = fields.ALT_Desc,
-		})
+		
+		--display.object:set_properties({
+		--		infotext = fields.ALT_Desc,
+		--})
+		
+		--display.alt_description = fields.ALT_Desc
+		display._altdescription = fields.ALT_Desc
 		--local props = display.object:get_properties ()
 		--for k,v in pairs(props) do
 		--  print (k)
@@ -484,8 +506,8 @@ function handle_display_form(player, formname, fields)
             newTextures[i] = "default.jpg"
 
             if url and url ~= "" then
-                local valid = ends_with_one_of(url, {".jpg", ".jpeg", ".JPG", ".png", ".PNG"})
-                local fixSpelling = ends_with_one_of(url, {".JPG", ".PNG"})
+                local valid = expomod.ends_with_one_of(url, {".jpg", ".jpeg", ".JPG", ".png", ".PNG"})
+                local fixSpelling = expomod.ends_with_one_of(url, {".JPG", ".PNG"})
                 print ("testing image url")
                 print ("url valid")
                 if valid then
@@ -495,14 +517,14 @@ function handle_display_form(player, formname, fields)
                         name = name:gsub(".PNG", ".png")
                     end
                     print ("file name " .. name)
-                    print ("file path " .. path_to_textures .. " file name:" .. name)
-                    if file_exists(path_to_textures .. url) then
+                    print ("file path " .. expomod.path_to_textures .. " file name:" .. name)
+                    if expomod.file_exists(expomod.path_to_textures .. url) then
                         newTextures[i] = url
                         print (url)
                         print (i)
-                        --msg_player(player, "Image " .. i .. " already downloaded.")
-                        --msg_player(player, "Image " .. url .. " loaded.")
-                        msg_player(player, "Image " .. name .. url .." loaded.")
+                        --expomod.msg_player(player, "Image " .. i .. " already downloaded.")
+                        --expomod.msg_player(player, "Image " .. url .. " loaded.")
+                        expomod.msg_player(player, "Image " .. name .. url .." loaded.")
                     --else
                     --    local ok = download_and_save_texture(player, url, name)
                     --    if ok then
@@ -513,7 +535,7 @@ function handle_display_form(player, formname, fields)
                     --    end
                     end
                 else
-                    msg_player(player, "Only .png and .jpg are supported. Invalid URL: " .. i .. " -> " .. url)
+                    expomod.msg_player(player, "Only .png and .jpg are supported. Invalid URL: " .. i .. " -> " .. url)
                 end
             end
         end
@@ -523,14 +545,14 @@ function handle_display_form(player, formname, fields)
 end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
-    if starts_with(formname, display_formspec_name) then
-        handle_display_form(player, formname, fields)
-    elseif starts_with(formname, display_remote_item_formspec_name) then
-        handle_display_remote_form(player, formname, fields)
+    if expomod.starts_with(formname, expomod.display_formspec_name) then
+        expomod.handle_display_form(player, formname, fields)
+    elseif expomod.starts_with(formname, expomod.display_remote_item_formspec_name) then
+        expomod.handle_display_remote_form(player, formname, fields)
     end
 end)
 
-function move_offset (display, x, y, z)
+function expomod.move_offset (display, x, y, z)
     local pos = display.object:get_pos()
     pos.x = pos.x + x
     pos.y = pos.y + y
@@ -539,15 +561,15 @@ function move_offset (display, x, y, z)
 end
 
 
- function starts_with(str, start)
+ function expomod.starts_with(str, start)
     return str:sub(1, #start) == start
  end
 
- function ends_with(str, ending)
+ function expomod.ends_with(str, ending)
     return ending == "" or str:sub(-#ending) == ending
  end
 
- function ends_with_one_of(str, endings)
+ function expomod.ends_with_one_of(str, endings)
     if str == "" then
         return true
     end
@@ -560,30 +582,30 @@ end
     return false
  end
 
- function msg_player(player, msg)
+ function expomod.msg_player(player, msg)
      minetest.chat_send_player(player:get_player_name(), msg)
  end
 
- function file_exists(name)
+ function expomod.file_exists(name)
     local f=io.open(name,"r")
     if f~=nil then io.close(f) return true else return false end
  end
 
 
 
-minetest.register_entity(display_entity_name, DisplayEntity)
+minetest.register_entity(expomod.display_entity_name, DisplayEntity)
 
 
 
-minetest.register_craftitem(display_item_name,{
+minetest.register_craftitem(expomod.display_item_name,{
     description = "Expo Display",
     inventory_image = "display_item.png",
     on_place = function(itemstack, user, pointed_thing)
 
         if pointed_thing.type == "node" then
-        minetest.add_entity(pointed_thing.above,  display_entity_name)
+        minetest.add_entity(pointed_thing.above,  expomod.display_entity_name)
 
-        --Displays are not consumed as this is meant as a creative mode only tool
+        --expomod.displays are not consumed as this is meant as a creative mode only tool
         --itemstack:take_item()
         end
         return itemstack
@@ -591,7 +613,7 @@ minetest.register_craftitem(display_item_name,{
 })
 
 
-minetest.register_craftitem(display_remote_item_name, {
+minetest.register_craftitem(expomod.display_remote_item_name, {
     description = "Expo Display Remote",
     inventory_image = "display_remote_item.png",
     on_use = function (itemstack, user, pointed_thing)
@@ -605,7 +627,7 @@ minetest.register_craftitem(display_remote_item_name, {
                 local entity = pointed_thing.ref:get_luaentity()
                 if entity then
                     meta:set_int("display_id", entity.id)
-                    msg_player(user, "[Display Remote] Bound to display with ID " .. entity.id)
+                    expomod.msg_player(user, "[Display Remote] Bound to display with ID " .. entity.id)
                     return itemstack
                 end
         end
@@ -613,8 +635,8 @@ minetest.register_craftitem(display_remote_item_name, {
         end
 
         local id = meta:get_int("display_id")
-        if id >= 0 and displays[id] ~= nil then
-            minetest.show_formspec(user:get_player_name(), display_remote_item_formspec_name .. id, get_remote_formspec(id))
+        if id >= 0 and expomod.displays[id] ~= nil then
+            minetest.show_formspec(user:get_player_name(), expomod.display_remote_item_formspec_name .. id, expomod.get_remote_formspec(id))
         end
     end
 
@@ -623,17 +645,17 @@ minetest.register_craftitem(display_remote_item_name, {
 
 })
 
-function get_remote_formspec(id)
+function expomod.get_remote_formspec(id)
 
     local formspec = ""
 
-    if id < 0 or displays[id] == nil then
+    if id < 0 or expomod.displays[id] == nil then
        formspec = "formspec_version[4]" ..
        "size[5,5]" ..
        "achor[0,0]" ..
     "label[1,1; Bound to no display, leftclick on a display to connect]"
     else
-        local display = displays[id]
+        local display = expomod.displays[id]
         local sizeY = 5.5 + math.floor(display.textures_count/5) * 0.5
 
         formspec = "formspec_version[4]" ..
@@ -658,34 +680,34 @@ function get_remote_formspec(id)
     return formspec
 end
 
-function handle_display_remote_form(player, formname, fields)
-    local id = tonumber(string.sub(formname, display_remote_item_formspec_name:len()+1))
-    --msg_player(player, "Received form ID:" .. id)
-    local display = displays[id]
+function expomod.handle_display_remote_form(player, formname, fields)
+    local id = tonumber(string.sub(formname, expomod.display_remote_item_formspec_name:len()+1))
+    --expomod.msg_player(player, "Received form ID:" .. id)
+    local display = expomod.displays[id]
 
     if display then
         if fields.Right then
-            msg_player(player, "Pressed right")
+            expomod.msg_player(player, "Pressed right")
             display:goto_next()
 
 
         elseif fields.Left then
             display:goto_previous()
-            msg_player(player, "Pressed left")
+            expomod.msg_player(player, "Pressed left")
 
         else
 
             for i = 1, display.textures_count, 1 do
                 if fields["goto_"..i] then
                     display:goto_number(i)
-                    msg_player(player,"pressed " ..i)
+                    expomod.msg_player(player,"pressed " ..i)
                     return
                 end
             end
 
         end
     else
-        msg_player(player, "no display with ID:" .. id)
+        expomod.msg_player(player, "no display with ID:" .. id)
     end
 end
 
@@ -694,7 +716,7 @@ minetest.register_chatcommand("log_expo_textures", {
         expopriv = true,
     },
     func = function(name, param)
-        if not insecure_environment then
+        if not expomod.insecure_environment then
         return false
         end
 
@@ -706,60 +728,104 @@ minetest.register_chatcommand("log_expo_textures", {
 
 --########################## HUD element
 
-expomod = {}
-local saved_huds = {}
 
-function expomod.update_text (player, text)
+--local saved_huds = {}
+expomod.saved_ghuds = {}
+expomod.default_background = "background.png"
+expomod.visible = false
+
+function expomod.update_visible (player, visible)
 	local player_name = player:get_player_name()
-	local ids = saved_huds[player_name]
-	print ("expo try to update")
-	if ids then
-        player:hud_change(ids["description"], "text", text)
-		print ("expo update")
+	local gids = expomod.saved_ghuds[player_name]
+	if gids then     
+		gids.visible = visible	
 	end
 end
+
+function expomod.update_text (player, text, visible)
+	local player_name = player:get_player_name()
+	local gids = expomod.saved_ghuds[player_name]
+	if gids then
+        player:hud_change(gids["description"], "text", text)
+		--player:hud_change(gids["background"], "text", expomod.default_background)
+		gids.visible = visible	
+		
+	end
 	
-function expomod.update_hud(player)
+end
+	
+function expomod.create_hud(player)
     local player_name = player:get_player_name()
-
-    -- Get the dig and place count from storage, or default to 0
-    local meta        = player:get_meta()
-    local desc_text = meta:get("expo:description") or ""
- 
-
-    local ids = saved_huds[player_name]
-    if ids then
-        player:hud_change(ids["description"], "text", desc_text)
-        
-    else
+    --local ids = saved_huds[player_name]
+	local gids = expomod.saved_ghuds[player_name]
+	
+    if not gids then
 		print ("expo : registering hud")
-        ids = {}
-        saved_huds[player_name] = ids
+        --ids = {}
+		gids = {}
+        --saved_huds[player_name] = gids
+		expomod.saved_ghuds[player_name]= gids
+		local ghid = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.5},
+			alignment = {x=1, y=1},
+			offset    = {x = 0, y = 0},
+			scale     = { x = -50, y = -50},
+			text = "background.png"
+		})
+		gids["background"] = ghid
+		local ghid2 = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.5},
+			alignment = {x=1, y=1},
+			offset    = {x = -17, y = -17},
+			scale     = { x = 1, y = 1},
+			text = "bordure_up.png"
+		})
+		gids["bordure_up"] = ghid2
+		local ghid3 = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.5},
+			alignment = {x=1, y=1},
+			offset    = {x = -17, y = 0},
+			scale     = { x = 1, y = 1},
+			text = "bordure_left.png"
+		})
+		gids["bordure_left"] = ghid3
 		local hid = player:hud_add({
 			hud_elem_type = "text",
-			position  = {x = 0.5, y = 0.5},
-			offset    = {x = 0, y = 0},
+			position  = {x = 1, y = 0.5},
+			offset    = {x = 12, y = 12},
 			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
-			alignment = -1,
-			scale     = { x = 0.25, y = 100},
-			number    = 0xFF0000,
+			alignment = {x=1, y=1},
+			scale     = { x = -100, y = -100},
+			number    = 0x000000,
+			size = {x=1.5,y=0,z=0},
 		})
-		ids["description"]= hid
+		gids["description"]= hid
+		
+		
+		gids.position = 1
+		gids.speed = 0.05
+		gids.endposition = 0.75
+		gids.visible = false
         
     end
 end
 
 function expomod.get_looking_entity(player) -- Return the node the given player is looking at or nil
     local lookat
+	local found_display = false
+	local player_look_vector = vector.multiply(player:get_look_dir(), 24)
 	
-	local player_look_vector = vector.multiply(player:get_look_dir(), 8)
-	
-	print ("### RAYCAST ###")
-	local raycast = minetest.raycast(player:get_pos(), vector.add(player:get_pos(), player_look_vector), true, false)
+	--print ("### RAYCAST ###")
+	local startpos = vector.add (player:get_pos(), {x=0,y=1.65,z=0})
+	local raycast = minetest.raycast(startpos, vector.add(player:get_pos(), player_look_vector), true, false)
 	for pointed_thing in raycast do
-		print (pointed_thing.type)
+		--print (pointed_thing.type)
 		if pointed_thing.type == "object" then
 			if pointed_thing then
+				--[[
 				for k,v in pairs(pointed_thing) do
 					print ("key: " .. k)
 					print (v)
@@ -771,32 +837,36 @@ function expomod.get_looking_entity(player) -- Return the node the given player 
 					print ("--key: " ..k1)
 					print (v1)
 				end
-				
-				print ("### meta")
-				
-				print(getmetatable(pointed_thing.ref))
-				local meta = getmetatable(pointed_thing.ref)
-				for k1,v1 in pairs (meta) do
-					print ("##key: " ..k1)
-					print (v1)
-				end
-				
-				print ("### meta meta")
-				local mmeta = pointed_thing.ref:get_meta()
-				print(mmeta)
-				print ("### object end")
-				
-				print ("### entity ")
+				--]]
+					
+							
+				--print ("### entity ")
 				if pointed_thing.ref then
 					if pointed_thing.ref.get_luaentity then
 						local entity = pointed_thing.ref:get_luaentity()
 						if entity then
-							print (entity)
-							for k1, v1 in pairs (entity) do
-								print ("entitykey :" .. k1)
-								print (v1)
+							--print (entity)
+							--for k1, v1 in pairs (entity) do
+							--	print ("entitykey :" .. k1)
+							--	print (v1)
+							--end
+							
+							if entity._expoid then
+								if entity._expoid == "expodisplay" then
+									
+									
+									if entity._altdescription and entity._altdescription ~= "" then
+										
+										--print ("description:" .. entity._altdescription)
+										expomod.update_text (player, entity._altdescription, true)
+										found_display = true
+										break
+									end	
+								end
 							end
+							
 						end
+						
 					end
 				end
 				
@@ -804,36 +874,12 @@ function expomod.get_looking_entity(player) -- Return the node the given player 
 			
 		end
     end
-	print ("### END RAYCAST ###")
+	if not found_display then
+		expomod.update_visible (player, false)
+	end
+	--print ("### END RAYCAST ###")
 	return lookat
-	--[[
-    for i = 0, 10 do -- 10 is the maximum distance you can point to things in creative mode by default
-        local lookvector = -- This variable will store what node we might be looking at
-            vector.add( -- This add function corrects for the players approximate height
-                vector.add( -- This add function applies the camera's position to the look vector
-                    vector.multiply( -- This multiply function adjusts the distance from the camera by the iteration of the loop we're in
-							player_look_vector, 
-							i -- Goes from 0 to 10
-                    ), 
-                    player:get_pos()
-                ),
-                vector.new(0, 1.5, 0)
-            )
-			
-			lookat = minetest.get_node_or_nil( -- This actually gets the node we might be looking at
-				lookvector
-        ) 
-		
-        if lookat ~= nil  then
-			for k,v in pairs(lookat) do
-				print (k)
-				print (v)
-			end
-		end
-    end
 	
-    return lookat
-	--]]
 end
 
 function expomod.check_entities ()
@@ -841,27 +887,72 @@ function expomod.check_entities ()
 		expomod.get_looking_entity(player)
 	end
 end	
+
+function expomod.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	player:hud_change(gids["bordure_up"], "position", back_position)
+	player:hud_change(gids["bordure_left"], "position", back_position)
+end
+
+function expomod.anim_display (player)
+	local player_name = player:get_player_name()
+    local gids = expomod.saved_ghuds[player_name]
+	
+	if gids.visible then
+		if gids.position > gids.endposition then
+			gids.position = gids.position - gids.speed
+			if gids.position < gids.endposition then
+				gids.position = gids.endposition
+			end
+			expomod.anim_update_position (player, gids, gids.position)	
+		end
+	else
+		if gids.position < 1.1 then
+			gids.position = gids.position + gids.speed
+			if gids.position > 1.1 then
+				gids.position = 1.1
+			end
+			expomod.anim_update_position (player, gids, gids.position)	
+		end
+	end	
+end
+
+function expomod.anim_player_displays ()
+	for pid, player in ipairs(minetest:get_connected_players()) do
+		expomod.anim_display (player)
+	end
+end
 	
 print ("# Expo: registering player join")
-minetest.register_on_joinplayer(expomod.update_hud)
+minetest.register_on_joinplayer(expomod.create_hud)
 
 minetest.register_on_leaveplayer(function(player)
-    saved_huds[player:get_player_name()] = nil
+    expomod.saved_ghuds[player:get_player_name()] = nil
 end)
 
 print ("# Expo: registering globalstep")
 expomod.timer = 0
+expomod.animtimer = 0
 minetest.register_globalstep(function(dtime)
 	expomod.timer = expomod.timer + dtime;
-	if expomod.timer >= 0.8 then
+	expomod.animtimer = expomod.animtimer + dtime;
+	if expomod.timer >= 0.25 then
 		
 		expomod.timer = 0
 		expomod.check_entities ()
 	end
+	if expomod.animtimer >= 0.1 then
+		expomod.animtimer = 0
+		expomod.anim_player_displays ()
+	end
+	
 end)
 
-print ("# Expo MOD NAME " .. modname)
-print ("# Expo MOD display_item_name " .. display_item_name)
-print ("# Expo MOD display_entity_name " .. display_entity_name)
+print ("# Expo MOD NAME " .. expomod.modname)
+print ("# Expo MOD expomod.display_item_name " .. expomod.display_item_name)
+print ("# Expo MOD expomod.display_entity_name " .. expomod.display_entity_name)
 print("# Expo [OK]")
 print ('###############################################')
