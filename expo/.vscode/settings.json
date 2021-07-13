@@ -1,9 +1,0 @@
-{
-    "Lua.diagnostics.disable": [
-        "lowercase-global"
-    ],
-    "Lua.diagnostics.globals": [
-        "minetest",
-        "DIR_DELIM"
-    ]
-}
