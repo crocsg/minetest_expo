@@ -1,7 +1,9 @@
 --#region GLOBAL VARIABLES
 
 expomod = {}
-
+expomod.gameui = {
+	model=2,
+}
 expomod.modname = minetest.get_current_modname()
 expomod.modpath = minetest.get_modpath(expomod.modname)
 expomod.modstorage = minetest.get_mod_storage()
@@ -13,7 +15,10 @@ print ('# minetest expomod.modname :' .. expomod.modname)
 print ('# private expomod.modname :' .. "expo")
 print ('# expomod.modpath :' .. expomod.modpath)
 
-
+expomod.gameui.model = expomod.modstorage:get_int("expo_model", expomod.gameui.model)
+if (expomod.gameui.model < 0 or expomod.gameui.model > 4) then
+	expomod.gameui.model = 0
+end
 
 expomod.path_to_textures = expomod.modpath .. DIR_DELIM .. "textures" .. DIR_DELIM
 
@@ -99,7 +104,7 @@ local DisplayEntity = {
     textures_count = 1,
 	_expoid="expodisplay",
 	_altdescription="",
-	plopbidule = "expodisplay",
+	
 
 
 }
@@ -188,11 +193,7 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
 			--})
 		end
 		
-		if (data.biduleplop) then
-			self.plopbidule = data.biduleplop
-		end
-		
-        self:update_size()
+		self:update_size()
         self:update_texture()
     end
 	
@@ -206,7 +207,7 @@ function DisplayEntity:on_activate(staticdata, dtime_s)
     end
 
     expomod.displays[self.id] = self
-	print ("expo on_activate")
+	--print ("expo on_activate")
 
 end
 
@@ -256,7 +257,7 @@ function  DisplayEntity:get_staticdata()
         allow_changing = self.allow_changing,
 		alt_description = tmp,
 		_expoid = self._expoid,
-		biduleplop = self.plopbidule,
+		
     })
 end
 
@@ -352,9 +353,11 @@ function DisplayEntity:show_formspec(clicker)
     "label[1,4.5;URLs:]" ..
     "field[2,4.25;1,.5;Count;Count:;".. self.textures_count .. "]" ..
     "button[5,8.5;2,.5;UpdateImages; Save URLs]" ..
+	
 	"label[1,5; Description]"..
-	"textarea[1,5.5;10,3;ALT_Desc;;"..  self._altdescription .. "]"
-
+	"textarea[1,5.5;10,3;ALT_Desc;;"..  self._altdescription .. "]" ..
+	
+	"button[6,4.5;2,.5;NextModel; Next Model]" 
 
     local y = 9
     for i = 1, self.textures_count, 1 do
@@ -497,8 +500,26 @@ function expomod.handle_display_form(player, formname, fields)
 		expomod.update_text (player, fields.ALT_Desc)
 
     end
-
-    if fields.UpdateImages then
+	if fields.NextModel then
+		local gids = expomod.saved_ghuds[player:get_player_name()]
+	
+		if gids then
+			if (expomod.gameui.book[expomod.gameui.model]) then
+				expomod.gameui.book[expomod.gameui.model].remove_hud(player, gids)
+			else
+				print ("EXPO : FRAME OBJECT = nil !!!!!!!!")
+			end
+			expomod.saved_ghuds[player:get_player_name()] = nil
+			expomod.gameui.model = expomod.gameui.model + 1
+			if (expomod.gameui.model > 4) then
+				expomod.gameui.model = 0
+			end	
+			expomod.create_hud(player)
+			expomod.modstorage:set_int("expo_model", expomod.gameui.model)
+		end
+	end
+    
+	if fields.UpdateImages then
         local newTextures = {}
         for i = 1, display.textures_count, 1 do
             local current = "URL"..i;
@@ -734,28 +755,10 @@ expomod.saved_ghuds = {}
 expomod.default_background = "background.png"
 expomod.visible = false
 
-function expomod.update_visible (player, visible)
-	local player_name = player:get_player_name()
-	local gids = expomod.saved_ghuds[player_name]
-	if gids then     
-		gids.visible = visible	
-	end
-end
 
-function expomod.update_text (player, text, visible)
-	local player_name = player:get_player_name()
-	local gids = expomod.saved_ghuds[player_name]
-	if gids then
-        player:hud_change(gids["description"], "text", text)
-		--player:hud_change(gids["background"], "text", expomod.default_background)
-		gids.visible = visible	
-		
-	end
-	
-end
-	
-function expomod.create_hud(player)
-    local player_name = player:get_player_name()
+expomod_gamedisplay_tablet = {}
+function expomod_gamedisplay_tablet.create_hud(player)
+local player_name = player:get_player_name()
     --local ids = saved_huds[player_name]
 	local gids = expomod.saved_ghuds[player_name]
 	
@@ -778,7 +781,7 @@ function expomod.create_hud(player)
 			hud_elem_type = "image",
 			position  = {x = 1, y = 0.5},
 			alignment = {x=1, y=1},
-			offset    = {x = -17, y = -17},
+			offset    = {x = -32, y = -32},
 			scale     = { x = 1, y = 1},
 			text = "bordure_up.png"
 		})
@@ -787,7 +790,7 @@ function expomod.create_hud(player)
 			hud_elem_type = "image",
 			position  = {x = 1, y = 0.5},
 			alignment = {x=1, y=1},
-			offset    = {x = -17, y = 0},
+			offset    = {x = -32, y = 0},
 			scale     = { x = 1, y = 1},
 			text = "bordure_left.png"
 		})
@@ -795,7 +798,7 @@ function expomod.create_hud(player)
 		local hid = player:hud_add({
 			hud_elem_type = "text",
 			position  = {x = 1, y = 0.5},
-			offset    = {x = 12, y = 12},
+			offset    = {x = 8, y = 8},
 			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
 			alignment = {x=1, y=1},
 			scale     = { x = -100, y = -100},
@@ -811,6 +814,302 @@ function expomod.create_hud(player)
 		gids.visible = false
         
     end
+end
+function expomod_gamedisplay_tablet.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	player:hud_change(gids["bordure_up"], "position", back_position)
+	player:hud_change(gids["bordure_left"], "position", back_position)
+end
+
+function expomod_gamedisplay_tablet.remove_hud (player, gids)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_remove(gids["description"])
+	player:hud_remove(gids["background"])
+	player:hud_remove(gids["bordure_up"])
+	player:hud_remove(gids["bordure_left"])
+	
+end
+
+expomod_gamedisplay_frame1 = {}
+function expomod_gamedisplay_frame1.create_hud(player)
+local player_name = player:get_player_name()
+    --local ids = saved_huds[player_name]
+	local gids = expomod.saved_ghuds[player_name]
+	
+    if not gids then
+		print ("expo : registering hud")
+        --ids = {}
+		gids = {}
+        --saved_huds[player_name] = gids
+		expomod.saved_ghuds[player_name]= gids
+		local ghid = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.25},
+			alignment = {x=1, y=1},
+			offset    = {x = -32, y = -32},
+			scale     = { x = 1, y = 1},
+			text = "1530893769.png"
+		})
+		gids["background"] = ghid
+				
+		local hid = player:hud_add({
+			hud_elem_type = "text",
+			position  = {x = 1, y = 0.25},
+			offset    = {x = 166 -32, y = 166-32},
+			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
+			alignment = {x=1, y=1},
+			scale     = { x = -100, y = -100},
+			number    = 0x000000,
+			size = {x=1.5,y=0,z=0},
+		})
+		gids["description"]= hid
+		
+		
+		gids.position = 1
+		gids.speed = 0.05
+		gids.endposition = 0.75
+		gids.visible = false
+        
+    end
+end
+
+function expomod_gamedisplay_frame1.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	
+end
+
+function expomod_gamedisplay_frame1.remove_hud (player, gids)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_remove(gids["description"])
+	player:hud_remove(gids["background"])
+	
+end
+
+expomod_gamedisplay_frame2 = {}
+function expomod_gamedisplay_frame2.create_hud(player)
+local player_name = player:get_player_name()
+    --local ids = saved_huds[player_name]
+	local gids = expomod.saved_ghuds[player_name]
+	
+    if not gids then
+		print ("expo : registering hud")
+        --ids = {}
+		gids = {}
+        --saved_huds[player_name] = gids
+		expomod.saved_ghuds[player_name]= gids
+		local ghid = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.25},
+			alignment = {x=1, y=1},
+			offset    = {x = -32, y = -32},
+			scale     = { x = 1, y = 1},
+			text = "1370290172.png"
+		})
+		gids["background"] = ghid
+				
+		local hid = player:hud_add({
+			hud_elem_type = "text",
+			position  = {x = 1, y = 0.25},
+			offset    = {x = 85 -32, y = 122-32},
+			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
+			alignment = {x=1, y=1},
+			scale     = { x = -100, y = -100},
+			number    = 0xffffff,
+			size = {x=1.5,y=0,z=0},
+		})
+		gids["description"]= hid
+		
+		
+		gids.position = 1
+		gids.speed = 0.05
+		gids.endposition = 0.75
+		gids.visible = false
+        
+    end
+end
+
+function expomod_gamedisplay_frame2.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	
+end
+
+function expomod_gamedisplay_frame2.remove_hud (player, gids)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_remove(gids["description"])
+	player:hud_remove(gids["background"])
+	
+end
+
+
+
+expomod_gamedisplay_frame3 = {}
+function expomod_gamedisplay_frame3.create_hud(player)
+local player_name = player:get_player_name()
+    --local ids = saved_huds[player_name]
+	local gids = expomod.saved_ghuds[player_name]
+	
+    if not gids then
+		print ("expo : registering hud")
+        --ids = {}
+		gids = {}
+        --saved_huds[player_name] = gids
+		expomod.saved_ghuds[player_name]= gids
+		local ghid = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.25},
+			alignment = {x=1, y=1},
+			offset    = {x = -19, y = -214},
+			scale     = { x = 1, y = 1},
+			text = "nodrugs.png"
+		})
+		gids["background"] = ghid
+				
+		local hid = player:hud_add({
+			hud_elem_type = "text",
+			position  = {x = 1, y = 0.25},
+			offset    = {x = 8, y = 8},
+			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
+			alignment = {x=1, y=1},
+			scale     = { x = -100, y = -100},
+			number    = 0xffffff,
+			size = {x=1.5,y=0,z=0},
+		})
+		gids["description"]= hid
+		
+		
+		gids.position = 1
+		gids.speed = 0.05
+		gids.endposition = 0.75
+		gids.visible = false
+        
+    end
+end
+function expomod_gamedisplay_frame3.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	
+end
+
+function expomod_gamedisplay_frame3.remove_hud (player, gids)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_remove(gids["description"])
+	player:hud_remove(gids["background"])
+	
+end
+
+
+expomod_gamedisplay_frame4 = {}
+function expomod_gamedisplay_frame4.create_hud(player)
+local player_name = player:get_player_name()
+    --local ids = saved_huds[player_name]
+	local gids = expomod.saved_ghuds[player_name]
+	
+    if not gids then
+		print ("expo : registering hud")
+        --ids = {}
+		gids = {}
+        --saved_huds[player_name] = gids
+		expomod.saved_ghuds[player_name]= gids
+		local ghid = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.25},
+			alignment = {x=1, y=1},
+			offset    = {x = -32, y = -32},
+			scale     = { x = 1, y = 1},
+			text = "telegrampaper.png"
+		})
+		gids["background"] = ghid
+				
+		local hid = player:hud_add({
+			hud_elem_type = "text",
+			position  = {x = 1, y = 0.25},
+			offset    = {x = 77-32, y = 204-32},
+			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
+			alignment = {x=1, y=1},
+			scale     = { x = -100, y = -100},
+			number    = 0x101010,
+			size = {x=1.5,y=0,z=0},
+		})
+		gids["description"]= hid
+		
+		
+		gids.position = 1
+		gids.speed = 0.05
+		gids.endposition = 0.75
+		gids.visible = false
+        
+    end
+end
+function expomod_gamedisplay_frame4.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	
+end
+
+function expomod_gamedisplay_frame4.remove_hud (player, gids)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_remove(gids["description"])
+	player:hud_remove(gids["background"])
+	
+end
+
+
+
+expomod.gameui.book = {}
+expomod.gameui.book[0]= expomod_gamedisplay_tablet
+expomod.gameui.book[1]= expomod_gamedisplay_frame1
+expomod.gameui.book[2]= expomod_gamedisplay_frame2
+expomod.gameui.book[3]= expomod_gamedisplay_frame3
+expomod.gameui.book[4]= expomod_gamedisplay_frame4
+
+function expomod.update_visible (player, visible)
+	local player_name = player:get_player_name()
+	local gids = expomod.saved_ghuds[player_name]
+	if gids then     
+		gids.visible = visible	
+	end
+end
+
+
+
+function expomod.update_text (player, text, visible)
+	local player_name = player:get_player_name()
+	local gids = expomod.saved_ghuds[player_name]
+	if gids then
+        player:hud_change(gids["description"], "text", text)
+		--player:hud_change(gids["background"], "text", expomod.default_background)
+		gids.visible = visible	
+		
+	end
+	
+end
+
+	
+function expomod.create_hud(player)
+	if (expomod.gameui.book[expomod.gameui.model]) then
+		expomod.gameui.book[expomod.gameui.model].create_hud(player)
+	else
+		print ("EXPO : FRAME OBJECT = nil !!!!!!!!")
+	end
+    
 end
 
 function expomod.get_looking_entity(player) -- Return the node the given player is looking at or nil
@@ -889,12 +1188,12 @@ function expomod.check_entities ()
 end	
 
 function expomod.anim_update_position (player, gids, position)
-	local back_position = {x=position, y = 0.5}
-	
-	player:hud_change(gids["description"], "position", back_position)
-	player:hud_change(gids["background"], "position", back_position)
-	player:hud_change(gids["bordure_up"], "position", back_position)
-	player:hud_change(gids["bordure_left"], "position", back_position)
+	if (expomod.gameui.book[expomod.gameui.model] and expomod.gameui.book[expomod.gameui.model].anim_update_position) then
+		expomod.gameui.book[expomod.gameui.model].anim_update_position (player, gids, position)
+	else
+		print ("EXPO : FRAME OBJECT = nil !!!!!!!!")
+	end
+    
 end
 
 function expomod.anim_display (player)
