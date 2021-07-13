@@ -3,6 +3,7 @@
 expomod = {}
 expomod.gameui = {
 	model=2,
+	nbmodel=5
 }
 expomod.modname = minetest.get_current_modname()
 expomod.modpath = minetest.get_modpath(expomod.modname)
@@ -16,7 +17,7 @@ print ('# private expomod.modname :' .. "expo")
 print ('# expomod.modpath :' .. expomod.modpath)
 
 expomod.gameui.model = expomod.modstorage:get_int("expo_model", expomod.gameui.model)
-if (expomod.gameui.model < 0 or expomod.gameui.model > 4) then
+if (expomod.gameui.model < 0 or expomod.gameui.model > expomod.gameui.nbmodel) then
 	expomod.gameui.model = 0
 end
 
@@ -511,7 +512,7 @@ function expomod.handle_display_form(player, formname, fields)
 			end
 			expomod.saved_ghuds[player:get_player_name()] = nil
 			expomod.gameui.model = expomod.gameui.model + 1
-			if (expomod.gameui.model > 4) then
+			if (expomod.gameui.model > expomod.gameui.nbmodel) then
 				expomod.gameui.model = 0
 			end	
 			expomod.create_hud(player)
@@ -1071,6 +1072,63 @@ function expomod_gamedisplay_frame4.remove_hud (player, gids)
 	
 end
 
+expomod_gamedisplay_frame5 = {}
+function expomod_gamedisplay_frame5.create_hud(player)
+local player_name = player:get_player_name()
+    --local ids = saved_huds[player_name]
+	local gids = expomod.saved_ghuds[player_name]
+	
+    if not gids then
+		print ("expo : registering hud")
+        --ids = {}
+		gids = {}
+        --saved_huds[player_name] = gids
+		expomod.saved_ghuds[player_name]= gids
+		local ghid = player:hud_add({
+			hud_elem_type = "image",
+			position  = {x = 1, y = 0.25},
+			alignment = {x=1, y=1},
+			offset    = {x = -32, y = -32},
+			scale     = { x = 1, y = 1},
+			text = "plastic.png"
+		})
+		gids["background"] = ghid
+				
+		local hid = player:hud_add({
+			hud_elem_type = "text",
+			position  = {x = 1, y = 0.25},
+			offset    = {x = 64-32, y = 64-32},
+			text      = "Text à la con un peu plus long \npour tester la limite de ce putain d'écran débile",
+			alignment = {x=1, y=1},
+			scale     = { x = -100, y = -100},
+			number    = 0x303060,
+			size = {x=1.5,y=0,z=0},
+		})
+		gids["description"]= hid
+		
+		
+		gids.position = 1
+		gids.speed = 0.05
+		gids.endposition = 0.75
+		gids.visible = false
+        
+    end
+end
+function expomod_gamedisplay_frame5.anim_update_position (player, gids, position)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_change(gids["description"], "position", back_position)
+	player:hud_change(gids["background"], "position", back_position)
+	
+end
+
+function expomod_gamedisplay_frame5.remove_hud (player, gids)
+	local back_position = {x=position, y = 0.5}
+	
+	player:hud_remove(gids["description"])
+	player:hud_remove(gids["background"])
+	
+end
 
 
 expomod.gameui.book = {}
@@ -1079,6 +1137,7 @@ expomod.gameui.book[1]= expomod_gamedisplay_frame1
 expomod.gameui.book[2]= expomod_gamedisplay_frame2
 expomod.gameui.book[3]= expomod_gamedisplay_frame3
 expomod.gameui.book[4]= expomod_gamedisplay_frame4
+expomod.gameui.book[5]= expomod_gamedisplay_frame5
 
 function expomod.update_visible (player, visible)
 	local player_name = player:get_player_name()
@@ -1121,7 +1180,10 @@ function expomod.get_looking_entity(player) -- Return the node the given player 
 	local startpos = vector.add (player:get_pos(), {x=0,y=1.65,z=0})
 	local raycast = minetest.raycast(startpos, vector.add(player:get_pos(), player_look_vector), true, false)
 	for pointed_thing in raycast do
-		--print (pointed_thing.type)
+		print (pointed_thing.type)
+		if pointed_thing.type == "node" then
+			break
+		end	
 		if pointed_thing.type == "object" then
 			if pointed_thing then
 				--[[
@@ -1176,7 +1238,7 @@ function expomod.get_looking_entity(player) -- Return the node the given player 
 	if not found_display then
 		expomod.update_visible (player, false)
 	end
-	--print ("### END RAYCAST ###")
+	print ("### END RAYCAST ###")
 	return lookat
 	
 end
