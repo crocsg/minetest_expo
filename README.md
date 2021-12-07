@@ -1,7 +1,8 @@
 # Minetest Expo
 A modified design of the great presentations mod to build virtual expositions in minetest
 This mod is derived from Minetest presentation https://github.com/LucxMangaJet/minetest_presentations
-The main purpose is to suppress the "download" features and allow images organisation in subfolders of "textures" folder
+The main purpose is to suppress the "download" features and allow images organisation in subfolders of "textures" folder. 
+This mods also add  text comments associated with pictures. These comments are showed on screen when the player is in vicinity.
 
 # Minetest Expo
 A mod for minetest that allows displaying images at runtime.  
